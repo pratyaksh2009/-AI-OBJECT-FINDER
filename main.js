@@ -1,54 +1,65 @@
-var mouseEvent = "empty";
+
+objects = [];
+status = "";
 
 
-    canvas = document.getElementById('myCanvas');
-    ctx = canvas.getContext("2d");
-    
-    color = "black";
-    width_of_line = 2;
-    canvas.addEventListener("mousedown", my_mousedown);
-    
-    function my_mousedown(e)
-    {
+function setup() {
+  canvas = createCanvas(380, 380);
+  canvas.center();
+  video = createCapture(VIDEO);
+  video.size(380,380);
+  video.hide();
+}
 
-        color = document.getElementById("color").value;
-        width_of_line = document.getElementById("width_of_line").value;
-        radius = document.getElementById("radius").value;
-        mouseEvent = "mouseDown";
-    }
+function modelLoaded() {
+  console.log("Model Loaded!")
+  status = true;
+}
 
-    canvas.addEventListener("mousemove", my_mousemove);
-    function my_mousemove(e)
-    {
-        current_position_of_mouse_x = e.clientX - canvas.offsetLeft;
-        current_position_of_mouse_y = e.clientY - canvas.offsetTop;
+function start()
+{
+  objectDetector = ml5.objectDetector('cocossd', modelLoaded);
+  document.getElementById("status").innerHTML = "Status : Detecting Objects";
+  object_name = document.getElementById("object_name").value;
+}
 
-        if (mouseEvent == "mouseDown") {
-        console.log("Current position of x and y coordinates = ");
-        console.log("x  = " + current_position_of_mouse_x + "y = " + current_position_of_mouse_y);
-        ctx.beginPath();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = width_of_line;
-        ctx.arc(current_position_of_mouse_x, current_position_of_mouse_y, radius ,0 , 2 * Math.PI);
-        ctx.stroke();
-        }
+function gotResult(error, results) {
+  if (error) {
+    console.log(error);
+  }
+  console.log(results);
+  objects = results;
+}
 
-    }
+function draw() {
+  image(video, 0, 0, 380, 380);
+      if(status != "")
+      {
+        objectDetector.detect(video, gotResult);
+        for (i = 0; i < objects.length; i++) {
+          document.getElementById("status").innerHTML = "Status : Object Detected";
+          
+          fill("#FF0000");
+          percent = floor(objects[i].confidence * 100);
+          text(objects[i].label + " " + percent + "%", objects[i].x + 15, objects[i].y + 15);
+          noFill();
+          stroke("#FF0000");
+          rect(objects[i].x, objects[i].y, objects[i].width, objects[i].height);
 
-    canvas.addEventListener("mouseup", my_mouseup);
-    function my_mouseup(e)
-    {
-        mouseEvent = "mouseUP";
-    }
-
-    canvas.addEventListener("mouseleave", my_mouseleave);
-    function my_mouseleave(e)
-    {
-        mouseEvent = "mouseleave";
-    }
-
-
-//Additional Activity
-function clearArea() {
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+         
+          if(objects[i].label == object_name)
+          {
+            video.stop();
+            objectDetector.detect(gotResult);
+            document.getElementById("object_status").innerHTML = object_name + " Found";
+            synth = window.speechSynthesis;
+            utterThis = new SpeechSynthesisUtterance(object_name + "Found");
+            synth.speak(utterThis);
+          }
+          else
+          {
+            document.getElementById("object_status").innerHTML = object_name + " Not Found";
+          }          
+         }
+      }
 }
